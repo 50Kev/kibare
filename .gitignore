@@ -1,0 +1,19 @@
+.env
+node_modules
+client/dist
+__pycache__
+.pytest_cache
+kibare-ca.crt
+client/.env
+# outils et documents du poste local, jamais publies
+*.bat
+/scripts-windows/
+/documents/
+journal-*.txt
+commandes-diag.cmd
+comptes-demo.txt
+journal-diag.txt
+qr-comptes-demo.html
+_to_delete/
+_traduction/
+LISEZMOI-LOCAL.txt

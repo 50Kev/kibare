@@ -1,0 +1,13 @@
+# le contexte de construction ne doit contenir ni secrets, ni dependances du poste, ni documents internes
+.git
+.env
+client/.env
+**/node_modules
+client/dist
+kibare-ca.crt
+documents
+scripts-windows
+*.bat
+tests
+**/__pycache__
+.pytest_cache
