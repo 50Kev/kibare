@@ -1,0 +1,28 @@
+{
+  "name": "faso-messagerie-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:serveur": "KIBARE_E2E=1 vitest run tests/integration"
+  },
+  "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "5.3.0",
+    "lucide-react": "1.64.0",
+    "matrix-encrypt-attachment": "1.0.3",
+    "matrix-js-sdk": "44.0.0",
+    "react": "19.2.9",
+    "react-dom": "19.2.9"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "6.1.2",
+    "fake-indexeddb": "6.2.5",
+    "vite": "8.3.4",
+    "vitest": "5.0.4"
+  }
+}
