@@ -1,0 +1,119 @@
+# genere par serveur/outils/preparer.py, ne pas modifier le fichier produit
+
+server_name: "@@DOMAINE@@"
+public_baseurl: "https://@@DOMAINE@@/"
+pid_file: "@@DOSSIER@@/homeserver.pid"
+signing_key_path: "@@DOSSIER@@/@@DOMAINE@@.signing.key"
+log_config: "@@DOSSIER@@/log.config"
+media_store_path: "@@DOSSIER@@/medias"
+report_stats: false
+enable_metrics: false
+
+listeners:
+  - port: 8008
+    type: http
+    tls: false
+    x_forwarded: true
+    bind_addresses: ["@@ECOUTE@@"]
+    resources:
+      # uniquement l'API client : pas de federation avec d'autres serveurs
+      - names: [client]
+        compress: false
+
+database:
+  name: psycopg2
+  args:
+    user: kibare
+    password: "@@MDP_POSTGRES@@"
+    database: synapse
+    host: "@@HOTE_BASE@@"
+    cp_min: 2
+    cp_max: 10
+
+registration_shared_secret: "@@SECRET_PARTAGE@@"
+macaroon_secret_key: "@@SECRET_MACAROON@@"
+form_secret: "@@SECRET_FORMULAIRE@@"
+
+# personne ne s'inscrit seul et personne n'entre avec un simple mot de passe
+enable_registration: false
+password_config:
+  enabled: false
+
+oidc_providers:
+  - idp_id: keycloak
+    idp_name: "Compte agent"
+    issuer: "https://@@DOMAINE@@/auth/realms/kibare"
+    discover: false
+    authorization_endpoint: "https://@@DOMAINE@@/auth/realms/kibare/protocol/openid-connect/auth"
+    token_endpoint: "@@KEYCLOAK_INTERNE@@/auth/realms/kibare/protocol/openid-connect/token"
+    userinfo_endpoint: "@@KEYCLOAK_INTERNE@@/auth/realms/kibare/protocol/openid-connect/userinfo"
+    jwks_uri: "@@KEYCLOAK_INTERNE@@/auth/realms/kibare/protocol/openid-connect/certs"
+    client_id: synapse
+    client_secret: "@@SECRET_OIDC@@"
+    client_auth_method: client_secret_post
+    scopes: ["openid", "profile"]
+    pkce_method: always
+    allow_existing_users: false
+    backchannel_logout_enabled: true
+    user_mapping_provider:
+      config:
+        subject_claim: sub
+        localpart_template: "{{ user.preferred_username }}"
+        display_name_template: "{{ user.name }}"
+    # sans le role agent dans Keycloak, pas d'acces
+    attribute_requirements:
+      - attribute: roles
+        value: agent
+
+sso:
+  client_whitelist:
+    - "https://@@DOMAINE@@/"
+  update_profile_information: true
+
+# souverainete : aucun serveur exterieur, pas meme matrix.org pour les cles
+trusted_key_servers: []
+federation_domain_whitelist: []
+allow_public_rooms_over_federation: false
+allow_public_rooms_without_auth: false
+serve_server_wellknown: false
+room_list_publication_rules:
+  - action: deny
+alias_creation_rules:
+  - action: deny
+
+# chiffrement impose par le serveur sur tout nouveau salon
+encryption_enabled_by_default_for_room_type: all
+
+# moins de metadonnees
+presence:
+  enabled: false
+require_auth_for_profile_requests: true
+limit_profile_requests_to_users_who_share_rooms: true
+include_profile_data_on_invite: false
+user_directory:
+  enabled: true
+  search_all_users: false
+url_preview_enabled: false
+user_ips_max_age: 1d
+redaction_retention_period: 1d
+forget_rooms_on_leave: true
+delete_stale_devices_after: 30d
+push:
+  include_content: false
+
+# limites de connexion : un ministere entier sort souvent par une seule adresse publique,
+# la limite par adresse est donc large ; celle par compte reste stricte.
+# la force brute sur les mots de passe est arretee plus tot, par Keycloak (5 essais)
+rc_login:
+  address:
+    per_second: 0.5
+    burst_count: 30
+  account:
+    per_second: 0.05
+    burst_count: 10
+  failed_attempts:
+    per_second: 0.1
+    burst_count: 5
+
+enable_authenticated_media: true
+max_upload_size: 30M

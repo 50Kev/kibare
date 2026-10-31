@@ -1,0 +1,60 @@
+{
+	admin off
+	# certificats emis par l'autorite locale de Caddy : aucun appel a un service exterieur
+	local_certs
+}
+
+{$DOMAINE:localhost} {
+	encode gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		-Server
+	}
+
+	# les consoles d'administration ne sont jamais exposees, l'outil passe par le reseau interne
+	# ce bloc passe avant les autres : un handle s'arrete au premier qui correspond
+	@interdit path /_synapse/admin /_synapse/admin/* /auth/admin /auth/admin/* /_matrix/federation/* /_matrix/key/*
+	handle @interdit {
+		respond 404
+	}
+
+	handle /_matrix/* {
+		reverse_proxy {$AMONT_SYNAPSE:synapse:8008}
+	}
+	handle /_synapse/client/* {
+		reverse_proxy {$AMONT_SYNAPSE:synapse:8008}
+	}
+	handle /auth/* {
+		reverse_proxy {$AMONT_KEYCLOAK:keycloak:8080}
+	}
+	handle {
+		root * {$RACINE_WEB:/srv}
+		try_files {path} /index.html
+		file_server
+	}
+
+	# aucun journal d'acces : on ne garde ni adresses IP ni heures de connexion
+	log {
+		output discard
+	}
+}
+
+# acces de Synapse a Keycloak (jeton, profil, cles) en https, certificat de l'autorite locale
+# port 8443 jamais publie : seul le reseau Docker interne l'atteint, et seuls ces trois chemins
+https://idp.kibare.interne:8443 {
+	@oidc path /auth/realms/kibare/protocol/openid-connect/token /auth/realms/kibare/protocol/openid-connect/userinfo /auth/realms/kibare/protocol/openid-connect/certs
+	handle @oidc {
+		reverse_proxy {$AMONT_KEYCLOAK:keycloak:8080}
+	}
+	handle {
+		respond 404
+	}
+	log {
+		output discard
+	}
+}

@@ -1,0 +1,158 @@
+name: kibare
+
+# une seule commande : docker compose up -d
+# rien ne sort vers Internet, le reseau interne n'a pas de passerelle
+
+x-journaux: &journaux
+  logging:
+    driver: local
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  base:
+    image: postgres:16.15-alpine
+    <<: *journaux
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kibare
+      POSTGRES_PASSWORD: ${MDP_POSTGRES:?definir MDP_POSTGRES dans .env}
+      POSTGRES_DB: kibare
+    volumes:
+      - donnees-base:/var/lib/postgresql/data
+      - ./serveur/postgres/init.sql:/docker-entrypoint-initdb.d/10-bases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kibare"]
+      interval: 5s
+      retries: 20
+    networks: [interne]
+
+  preparation:
+    image: matrixdotorg/synapse:v1.163.0
+    entrypoint: ["python", "/outils/preparer.py"]
+    restart: "no"
+    environment:
+      DOMAINE: ${DOMAINE:-localhost}
+      MDP_POSTGRES: ${MDP_POSTGRES}
+      SECRET_OIDC: ${SECRET_OIDC:?definir SECRET_OIDC dans .env}
+      HOTE_BASE: base
+      ECOUTE: 0.0.0.0
+      # https meme en interne : Synapse passe par Caddy (voir Caddyfile, idp.kibare.interne)
+      KEYCLOAK_INTERNE: https://idp.kibare.interne:8443
+      DOSSIER: /data
+    volumes:
+      - config-synapse:/data
+      - ./serveur/synapse:/modeles:ro
+      - ./serveur/outils:/outils:ro
+    networks: [interne]
+
+  synapse:
+    image: matrixdotorg/synapse:v1.163.0
+    <<: *journaux
+    restart: unless-stopped
+    depends_on:
+      preparation:
+        condition: service_completed_successfully
+      base:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+      web:
+        condition: service_healthy
+    environment:
+      SYNAPSE_CONFIG_PATH: /data/homeserver.yaml
+      # seule autorite de confiance : la racine locale de Caddy (aucun appel exterieur)
+      SSL_CERT_FILE: /ca/root.crt
+    volumes:
+      - config-synapse:/data
+      - ca-publique:/ca:ro
+    networks: [interne]
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    <<: *journaux
+    restart: unless-stopped
+    command: ["start", "--import-realm"]
+    depends_on:
+      base:
+        condition: service_healthy
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://base:5432/keycloak
+      KC_DB_USERNAME: kibare
+      KC_DB_PASSWORD: ${MDP_POSTGRES}
+      KC_HOSTNAME: https://${DOMAINE:-localhost}/auth
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HTTP_ENABLED: "true"
+      KC_HTTP_RELATIVE_PATH: /auth
+      KC_PROXY_HEADERS: xforwarded
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${ADMIN_KEYCLOAK:-gardien}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${MDP_ADMIN_KEYCLOAK:?definir MDP_ADMIN_KEYCLOAK dans .env}
+      KC_LOG_LEVEL: warn
+      DOMAINE: ${DOMAINE:-localhost}
+      SECRET_OIDC: ${SECRET_OIDC}
+      SECRET_OUTIL: ${SECRET_OUTIL:?definir SECRET_OUTIL dans .env}
+    volumes:
+      - ./serveur/keycloak/realm-kibare.json:/opt/keycloak/data/import/realm-kibare.json:ro
+    networks: [interne]
+
+  web:
+    build:
+      context: .
+      dockerfile: serveur/caddy/Dockerfile
+      args:
+        DOMAINE: ${DOMAINE:-localhost}
+    <<: *journaux
+    restart: unless-stopped
+    entrypoint: ["sh", "/demarrer.sh"]
+    environment:
+      DOMAINE: ${DOMAINE:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./serveur/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./serveur/caddy/demarrer.sh:/demarrer.sh:ro
+      - donnees-caddy:/data
+      - ca-publique:/ca-publique
+    healthcheck:
+      test: ["CMD", "test", "-s", "/ca-publique/root.crt"]
+      interval: 2s
+      retries: 90
+    networks:
+      interne:
+        aliases: [idp.kibare.interne]
+      public: {}
+
+  outil:
+    image: python:3.12.12-slim
+    profiles: [outils]
+    entrypoint: ["python", "/outils/kibare_admin.py"]
+    environment:
+      DOMAINE: ${DOMAINE:-localhost}
+      SYNAPSE_INTERNE: http://synapse:8008
+      KEYCLOAK_INTERNE: http://keycloak:8080
+      SECRET_OUTIL: ${SECRET_OUTIL}
+      ADMIN_KEYCLOAK: ${ADMIN_KEYCLOAK:-gardien}
+      MDP_ADMIN_KEYCLOAK: ${MDP_ADMIN_KEYCLOAK}
+      FICHIER_SECRETS: /synapse/secrets.json
+      DOSSIER_ETAT: /etat
+    volumes:
+      - ./serveur/outils:/outils:ro
+      - ./serveur/keycloak:/keycloak:ro
+      - config-synapse:/synapse:ro
+      - etat-outil:/etat
+    networks: [interne]
+
+networks:
+  interne:
+    internal: true
+  public: {}
+
+volumes:
+  donnees-base:
+  config-synapse:
+  donnees-caddy:
+  etat-outil:
+  ca-publique:
