@@ -45,7 +45,9 @@ docker compose up -d --build
 
 printf "attente de https://%s (Keycloak peut prendre deux minutes)" "$DOMAINE"
 essais=0
-until curl -ksf -o /dev/null "https://$DOMAINE/_matrix/client/v3/login"; do
+# Synapse et Keycloak doivent repondre tous les deux : Keycloak demarre souvent apres Synapse
+until curl -ksf -o /dev/null "https://$DOMAINE/_matrix/client/v3/login" \
+	&& curl -ksf -o /dev/null "https://$DOMAINE/auth/realms/kibare/.well-known/openid-configuration"; do
 	essais=$((essais + 1))
 	if [ "$essais" -gt 90 ]; then
 		echo

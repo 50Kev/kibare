@@ -204,3 +204,12 @@ def test_racine_publiee_lisible_sans_sa_cle():
     script = (SERVEUR / "caddy" / "demarrer.sh").read_text(encoding="utf-8")
     assert "chmod 644 /ca-publique/root.crt" in script
     assert "root.key" not in script
+
+
+def test_installation_attend_aussi_keycloak():
+    # les comptes de demonstration passent par Keycloak, qui demarre souvent apres Synapse
+    script = (RACINE / "installer.sh").read_text(encoding="utf-8")
+    assert "/auth/realms/kibare/.well-known/openid-configuration" in script
+    lanceur = (RACINE / "scripts-windows" / "lanceur.py")
+    if lanceur.exists():
+        assert "/auth/realms/kibare/.well-known/openid-configuration" in lanceur.read_text(encoding="utf-8")
