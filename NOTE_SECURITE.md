@@ -14,7 +14,7 @@ Nous protégeons le contenu des échanges de service (messages, fichiers, noms d
 
 **Chiffrement de bout en bout.** Protocole Matrix : Olm entre appareils, Megolm pour les groupes, via matrix-sdk-crypto-wasm (code de la fondation Matrix). Les fichiers sont chiffrés en AES-256-CTR avant envoi par matrix-encrypt-attachment, avec vérification d'empreinte SHA-256 à l'ouverture. Aucune cryptographie n'a été écrite par l'équipe. Le serveur impose le chiffrement sur tout nouveau salon.
 
-**Hébergement souverain.** `docker compose up -d` installe toute la pile. Synapse, Keycloak et PostgreSQL sont sur un réseau Docker interne **sans passerelle vers Internet** ; seul le proxy Caddy est exposé, en https avec une autorité de certification locale. Pas de fédération, aucun serveur de clés extérieur (pas même matrix.org), aucune statistique envoyée.
+**Hébergement souverain.** `docker compose up -d` installe toute la pile. Synapse, Keycloak et PostgreSQL sont sur un réseau Docker interne **sans passerelle vers Internet** ; seul le proxy Caddy est exposé, en https avec une autorité de certification locale. Pas de fédération, aucun serveur de clés extérieur (pas même matrix.org), aucune statistique envoyée. Même le lien interne entre Synapse et Keycloak passe en https, avec l'autorité locale dont seule la racine publique est partagée.
 
 **Identité vérifiée.** Inscription fermée et connexion par mot de passe désactivée dans Synapse : la seule entrée est Keycloak, où chaque agent est créé par l'administration. Mot de passe (12 caractères, majuscule, minuscule, chiffre) **et** code TOTP obligatoires pour tous ; l'agent configure son code et change son mot de passe provisoire à la première connexion. Blocage après 5 échecs. Synapse refuse tout compte sans le rôle `agent` (rôles `agent` et `administrateur`). Côté client, chaque appareil est signé par la clé d'identité de l'agent, protégée par sa phrase de sécurité ; les clés de groupe ne partent jamais vers un appareil non signé.
 
@@ -43,5 +43,6 @@ Vérifié par test : après un échange, ni le texte, ni le niveau, ni le nom du
 - **Client modifié** : un destinataire qui modifie son application peut ignorer les règles de classification ; le serveur ne peut pas les imposer puisqu'il ne lit rien.
 - **Première rencontre** : l'identité d'un collègue est acceptée sans vérification humaine la première fois ; suite prévue : annuaire officiel signé par l'administration.
 - **Phrase oubliée** : personne ne peut la retrouver ; l'historique est alors perdu sur un nouvel appareil.
+- **Écrans de connexion** : les pages de Keycloak (mot de passe et code) restent en français ; le mooré et le dioula sont des brouillons automatiques en cours de relecture.
 - **Certificats** : l'autorité locale de Caddy doit être installée sur les postes ; en production, utiliser l'infrastructure de clés de l'État.
 - **Synapse et Keycloak** : leur sécurité dépend de mises à jour régulières.

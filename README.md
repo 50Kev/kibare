@@ -29,6 +29,7 @@ Le chiffrement se fait **dans le navigateur** avec le protocole Matrix (Olm et M
 | lucide-react | ISC | github.com/lucide-icons/lucide |
 | Bricolage Grotesque | OFL-1.1 | github.com/fontsource/font-files |
 | Python, pytest, PyYAML, requests, pyotp | PSF, MIT | python.org, pytest.org |
+| NLLB-200 de Meta (outil de traduction, non livré) | CC-BY-NC-4.0 | brouillons mooré et dioula |
 | Kibaré (notre code) | MIT | fichier LICENSE |
 
 ## Installation
@@ -84,4 +85,4 @@ Docker Desktop, Node.js 22, Python 3.12 et Git suffisent. Toutes les commandes c
 
 ## Limites
 
-Le serveur voit qui appartient à quel groupe et quand chacun écrit ; aucune application web ne peut empêcher une photo de l'écran ; les règles de classification sont appliquées par le client. Le détail est dans `NOTE_SECURITE.md`.
+Le serveur voit qui appartient à quel groupe et quand chacun écrit ; aucune application web ne peut empêcher une photo de l'écran ; les règles de classification sont appliquées par le client ; l'interface en mooré et en dioula est en bêta (traduction automatique en cours de relecture, le français s'affiche pour les textes non validés). Le détail est dans `NOTE_SECURITE.md`.
