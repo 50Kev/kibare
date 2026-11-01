@@ -81,7 +81,11 @@ cd client && npm install && npm test         # client
 
 ## Sous Windows
 
-Docker Desktop, Node.js 22, Python 3.12 et Git suffisent. L'installation se lance dans **Git Bash** (fourni avec Git pour Windows) : `sh installer.sh --demo`. Les commandes `docker compose`, `python` et `npm` ci-dessus fonctionnent aussi dans PowerShell ; `inspecter.py` remplace `inspecter.sh`.
+Docker Desktop, Node.js 22, Python 3.12 et Git suffisent.
+
+**Le plus simple : double-cliquer sur `KIBARE.bat`.** Un menu propose chaque action dans l'ordre : vérifier les outils, créer le `.env` (secrets aléatoires), démarrer, charger les comptes fictifs, récupérer et installer le certificat, puis enrôler, révoquer, retirer un appareil, inspecter la base (« le serveur ne lit rien ») et lancer les tests. Chaque action existe aussi en fichier séparé dans `scripts-windows/` (de `01-verifier-outils.bat` à `99-tout-effacer.bat`, qui demande confirmation). Ces fichiers appellent tous `scripts-windows/lanceur.py`, qui ne fait que lancer les commandes `docker compose` et `python` décrites plus haut ; il fonctionne aussi sous Linux et macOS (`python3 scripts-windows/lanceur.py menu`).
+
+Sans le menu, l'installation se lance dans **Git Bash** (fourni avec Git pour Windows) : `sh installer.sh --demo`. Les commandes `docker compose`, `python` et `npm` ci-dessus fonctionnent aussi dans PowerShell ; `inspecter.py` remplace `inspecter.sh`.
 
 ## Limites
 

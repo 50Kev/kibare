@@ -6,9 +6,12 @@ __pycache__
 kibare-ca.crt
 client/.env
 # outils et documents du poste local, jamais publies
-*.bat
-/scripts-windows/
+# (le menu Windows KIBARE.bat et le dossier scripts-windows sont publies)
 /documents/
+/diagnostic.bat
+/lancement-auto.bat
+/traduire-nllb.bat
+/publier.bat
 journal-*.txt
 commandes-diag.cmd
 comptes-demo.txt
