@@ -8,8 +8,8 @@ const dictionnaires = { fr, mos, dyu };
 
 export const LANGUES = [
   { code: "fr", nom: "Français" },
-  { code: "mos", nom: "Mooré" },
-  { code: "dyu", nom: "Dioula" },
+  { code: "mos", nom: "Mooré (bêta)" },
+  { code: "dyu", nom: "Dioula (bêta)" },
 ];
 
 const Contexte = createContext(null);
