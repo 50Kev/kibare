@@ -81,7 +81,7 @@ cd client && npm install && npm test         # client
 
 ## Sous Windows
 
-Docker Desktop, Node.js 22, Python 3.12 et Git suffisent. Toutes les commandes ci-dessus fonctionnent dans PowerShell ; `inspecter.py` remplace `inspecter.sh`.
+Docker Desktop, Node.js 22, Python 3.12 et Git suffisent. L'installation se lance dans **Git Bash** (fourni avec Git pour Windows) : `sh installer.sh --demo`. Les commandes `docker compose`, `python` et `npm` ci-dessus fonctionnent aussi dans PowerShell ; `inspecter.py` remplace `inspecter.sh`.
 
 ## Limites
 
