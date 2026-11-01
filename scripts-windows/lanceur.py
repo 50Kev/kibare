@@ -187,21 +187,25 @@ def demarrer():
 
 
 def arreter():
+    exiger_env()
     titre("Arret du serveur (les donnees sont gardees)")
     compose("down")
 
 
 def etat():
+    exiger_env()
     titre("Etat des services")
     compose("ps")
 
 
 def journaux():
+    exiger_env()
     service = demander("Service (base, synapse, keycloak, web, ou vide pour tous)", "")
     compose("logs", "--tail", "200", *([service] if service else []), verifier=False)
 
 
 def effacer_tout():
+    exiger_env()
     titre("Effacement complet")
     print("  Supprime la base, les comptes, les messages chiffres et les certificats.")
     if demander("Tapez EFFACER pour confirmer") != "EFFACER":
