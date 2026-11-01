@@ -26,12 +26,12 @@ def lire_reglages(env):
 def secrets_persistants(fichier):
     # generes au premier passage puis relus, sinon chaque redemarrage casserait les sessions
     if fichier.exists():
-        valeurs = json.loads(fichier.read_text())
+        valeurs = json.loads(fichier.read_text(encoding="utf-8"))
     else:
         valeurs = {}
     for cle in SECRETS_INTERNES:
         valeurs.setdefault(cle, secrets.token_urlsafe(48))
-    fichier.write_text(json.dumps(valeurs, indent=2))
+    fichier.write_text(json.dumps(valeurs, indent=2), encoding="utf-8")
     fichier.chmod(0o600)
     return valeurs
 
@@ -56,7 +56,8 @@ def generer_cle(config):
 
 
 def donner_a_synapse(dossier):
-    if os.geteuid() != 0:
+    # seulement dans le conteneur, en root ; ailleurs (tests, Windows) rien a faire
+    if not hasattr(os, "geteuid") or os.geteuid() != 0:
         return
     for chemin in [dossier, *dossier.rglob("*")]:
         os.chown(chemin, UID_SYNAPSE, UID_SYNAPSE)
@@ -70,12 +71,13 @@ def main(env=os.environ):
 
     valeurs = lire_reglages(env)
     valeurs.update(secrets_persistants(dossier / "secrets.json"))
-    valeurs["DOSSIER"] = str(dossier)
+    # chemin avec des / : un chemin Windows casserait les guillemets du YAML (tests sous Windows)
+    valeurs["DOSSIER"] = dossier.as_posix()
 
     config = dossier / "homeserver.yaml"
-    config.write_text(remplir((modeles / "homeserver.modele.yaml").read_text(), valeurs))
+    config.write_text(remplir((modeles / "homeserver.modele.yaml").read_text(encoding="utf-8"), valeurs), encoding="utf-8")
     config.chmod(0o600)
-    (dossier / "log.config").write_text((modeles / "log.config").read_text())
+    (dossier / "log.config").write_text((modeles / "log.config").read_text(encoding="utf-8"), encoding="utf-8")
 
     if not (dossier / f"{valeurs['DOMAINE']}.signing.key").exists():
         generer_cle(config)

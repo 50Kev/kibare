@@ -125,7 +125,7 @@ def trouver_agent(r, jeton, identifiant):
 
 def enregistrer_admin_synapse(r):
     # inscription par secret partage, procedure documentee de Synapse : HMAC-SHA1 du module hmac de Python
-    secret = json.loads(r.fichier_secrets.read_text())["SECRET_PARTAGE"]
+    secret = json.loads(r.fichier_secrets.read_text(encoding="utf-8"))["SECRET_PARTAGE"]
     url = f"{r.synapse}/_synapse/admin/v1/register"
     nonce = appel("GET", url)["nonce"]
     nom, mdp = "kibare-admin", secrets.token_urlsafe(32)
@@ -138,10 +138,10 @@ def enregistrer_admin_synapse(r):
 def jeton_synapse(r):
     fichier = r.dossier_etat / "jeton_synapse"
     if fichier.exists():
-        return fichier.read_text().strip()
+        return fichier.read_text(encoding="utf-8").strip()
     r.dossier_etat.mkdir(parents=True, exist_ok=True)
     jeton = enregistrer_admin_synapse(r)
-    fichier.write_text(jeton)
+    fichier.write_text(jeton, encoding="utf-8")
     fichier.chmod(0o600)
     return jeton
 
@@ -225,7 +225,7 @@ def lister(r):
 
 def demo(r):
     jeton = jeton_admin_keycloak(r)
-    comptes = json.loads(r.comptes_demo.read_text())
+    comptes = json.loads(r.comptes_demo.read_text(encoding="utf-8"))
     kc(r, jeton, "POST", "/partialImport", comptes)
     lignes = []
     for u in comptes["users"]:

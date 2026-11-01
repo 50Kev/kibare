@@ -5,6 +5,7 @@
 import json
 import os
 import shlex
+import shutil
 import subprocess
 import sys
 import time
@@ -144,11 +145,14 @@ def test_revocation_immediate_et_definitive():
 def test_echange_chiffre_rien_en_clair():
     if not (RACINE / "client" / "node_modules").exists():
         pytest.skip("client non installe : npm install dans client/")
-    sessions = [entrer("agent1"), entrer("agent2")]
+    # agent3 et un agent cree pour l'essai : agent1 et agent2 restent libres pour la demonstration
+    identifiant, fiche = nouvel_agent()
+    jeton, _, _ = premiere_connexion(BASE, identifiant, fiche["mot_de_passe_provisoire"], "Essai-Echange-2026x", verify=VERIFY)
+    sessions = [entrer("agent3"), session_matrix(BASE, jeton, verify=VERIFY)]
     env = {**os.environ, "KIBARE_SESSIONS": json.dumps(sessions), "VITE_SERVEUR": BASE}
     if isinstance(VERIFY, str):
         env["NODE_EXTRA_CA_CERTS"] = VERIFY
-    r = subprocess.run(["npx", "vitest", "run", "tests/integration/pile.test.js"], cwd=RACINE / "client",
+    r = subprocess.run([shutil.which("npx") or "npx", "vitest", "run", "tests/integration/pile.test.js"], cwd=RACINE / "client",
                        env=env, capture_output=True, text=True, timeout=240)
     assert r.returncode == 0, r.stdout[-2000:]
     commande = os.environ.get("KIBARE_COMMANDE_INSPECTER")
@@ -156,3 +160,4 @@ def test_echange_chiffre_rien_en_clair():
     for motif in ["Pile-secret-instruction-5520", "Pile-groupe-cabinet", "pile-note.txt", "Pile-fichier-contenu-8812"]:
         v = subprocess.run([*inspecteur, motif], cwd=RACINE, capture_output=True, text=True)
         assert v.returncode == 0 and "verdict: rien en clair" in v.stdout, v.stdout
+    outil("revoquer", identifiant)

@@ -23,7 +23,7 @@ ENV = {
 def homeserver(tmp_path, monkeypatch):
     monkeypatch.setattr(preparer, "generer_cle", lambda config: None)
     preparer.main({**ENV, "DOSSIER": str(tmp_path), "MODELES": str(SERVEUR / "synapse")})
-    return yaml.safe_load((tmp_path / "homeserver.yaml").read_text()), tmp_path
+    return yaml.safe_load((tmp_path / "homeserver.yaml").read_text(encoding="utf-8")), tmp_path
 
 
 def test_aucune_inscription_ni_mot_de_passe(homeserver):
@@ -48,7 +48,7 @@ def test_metadonnees_reduites(homeserver):
     assert conf["user_directory"]["search_all_users"] is False
     assert conf["url_preview_enabled"] is False
     assert conf["encryption_enabled_by_default_for_room_type"] == "all"
-    journal = yaml.safe_load((SERVEUR / "synapse" / "log.config").read_text())
+    journal = yaml.safe_load((SERVEUR / "synapse" / "log.config").read_text(encoding="utf-8"))
     assert journal["loggers"]["synapse.access"]["level"] == "ERROR"
 
 
@@ -63,12 +63,14 @@ def test_sso_exige_le_role_agent(homeserver):
 
 def test_secrets_stables_et_proteges(homeserver, monkeypatch):
     conf, dossier = homeserver
-    premier = json.loads((dossier / "secrets.json").read_text())
+    premier = json.loads((dossier / "secrets.json").read_text(encoding="utf-8"))
     monkeypatch.setattr(preparer, "generer_cle", lambda config: None)
     preparer.main({**ENV, "DOSSIER": str(dossier), "MODELES": str(SERVEUR / "synapse")})
-    assert json.loads((dossier / "secrets.json").read_text()) == premier
-    assert (dossier / "secrets.json").stat().st_mode & 0o077 == 0
-    assert (dossier / "homeserver.yaml").stat().st_mode & 0o077 == 0
+    assert json.loads((dossier / "secrets.json").read_text(encoding="utf-8")) == premier
+    # droits Unix : verifies hors Windows (en vrai, ces fichiers sont ecrits dans le conteneur Linux)
+    if os.name != "nt":
+        assert (dossier / "secrets.json").stat().st_mode & 0o077 == 0
+        assert (dossier / "homeserver.yaml").stat().st_mode & 0o077 == 0
 
 
 def test_preparer_refuse_les_reglages_douteux(tmp_path):
@@ -81,7 +83,7 @@ def test_preparer_refuse_les_reglages_douteux(tmp_path):
 
 
 def test_compose_isole_les_services():
-    compose = yaml.safe_load((RACINE / "docker-compose.yml").read_text())
+    compose = yaml.safe_load((RACINE / "docker-compose.yml").read_text(encoding="utf-8"))
     assert compose["networks"]["interne"]["internal"] is True
     for nom, service in compose["services"].items():
         image = service.get("image")
@@ -94,7 +96,7 @@ def test_compose_isole_les_services():
 
 
 def test_royaume_keycloak():
-    royaume = json.loads((SERVEUR / "keycloak" / "realm-kibare.json").read_text())
+    royaume = json.loads((SERVEUR / "keycloak" / "realm-kibare.json").read_text(encoding="utf-8"))
     assert royaume["registrationAllowed"] is False
     assert royaume["bruteForceProtected"] is True
     assert int(re.search(r"length\((\d+)\)", royaume["passwordPolicy"]).group(1)) >= 12
@@ -110,7 +112,7 @@ def test_royaume_keycloak():
 
 
 def test_comptes_de_demo_fictifs():
-    demo = json.loads((SERVEUR / "keycloak" / "comptes-demo.json").read_text())
+    demo = json.loads((SERVEUR / "keycloak" / "comptes-demo.json").read_text(encoding="utf-8"))
     for u in demo["users"]:
         assert u["lastName"] in ("Démo", "Sans rôle")
     sans_role = [u for u in demo["users"] if "agent" not in u["realmRoles"]]
@@ -118,7 +120,7 @@ def test_comptes_de_demo_fictifs():
 
 
 def test_caddy_ferme_les_consoles_avant_tout():
-    texte = (SERVEUR / "caddy" / "Caddyfile").read_text()
+    texte = (SERVEUR / "caddy" / "Caddyfile").read_text(encoding="utf-8")
     position_interdit = texte.index("handle @interdit")
     assert all(position_interdit < m.start() for m in re.finditer(r"\bhandle /", texte))
     for chemin in ["/_synapse/admin/*", "/auth/admin/*", "/_matrix/federation/*"]:
@@ -144,13 +146,13 @@ def test_limites_de_connexion(homeserver):
 
 
 def test_contexte_docker_sans_secrets_ni_dependances_du_poste():
-    regles = (RACINE / ".dockerignore").read_text().split()
+    regles = (RACINE / ".dockerignore").read_text(encoding="utf-8").split()
     for interdit in [".env", "client/.env", "**/node_modules", ".git", "documents"]:
         assert interdit in regles
 
 
 def test_fins_de_ligne_imposees():
-    texte = (RACINE / ".gitattributes").read_text()
+    texte = (RACINE / ".gitattributes").read_text(encoding="utf-8")
     assert "* text=auto eol=lf" in texte and "*.bat text eol=crlf" in texte
 
 
@@ -171,18 +173,18 @@ def test_installation_en_une_commande(tmp_path):
     env.pop("DOMAINE", None)
 
     subprocess.run(["sh", "installer.sh", "192.168.1.20", "--demo"], cwd=depot, env=env, check=True, capture_output=True)
-    contenu = (depot / ".env").read_text()
+    contenu = (depot / ".env").read_text(encoding="utf-8")
     valeurs = dict(l.split("=", 1) for l in contenu.splitlines() if "=" in l)
     assert valeurs["DOMAINE"] == "192.168.1.20"
     secrets_generes = [valeurs[c] for c in ("MDP_POSTGRES", "SECRET_OIDC", "SECRET_OUTIL", "MDP_ADMIN_KEYCLOAK")]
     assert all(len(s) == 64 for s in secrets_generes) and len(set(secrets_generes)) == 4
     assert (depot / ".env").stat().st_mode & 0o077 == 0
-    appels = journal.read_text()
+    appels = journal.read_text(encoding="utf-8")
     assert "docker compose up -d --build" in appels and "docker compose run --rm outil demo" in appels
 
     # un second lancement garde les secrets, sinon la base ne s'ouvrirait plus
     subprocess.run(["sh", "installer.sh"], cwd=depot, env=env, check=True, capture_output=True)
-    assert (depot / ".env").read_text() == contenu
+    assert (depot / ".env").read_text(encoding="utf-8") == contenu
 
 
 def test_synapse_joint_keycloak_en_https(homeserver):
@@ -192,13 +194,13 @@ def test_synapse_joint_keycloak_en_https(homeserver):
     for cle in ["issuer", "authorization_endpoint", "token_endpoint", "userinfo_endpoint", "jwks_uri"]:
         assert fournisseur[cle].startswith("https://"), cle
     assert "skip_verification" not in fournisseur
-    compose = yaml.safe_load((RACINE / "docker-compose.yml").read_text())
+    compose = yaml.safe_load((RACINE / "docker-compose.yml").read_text(encoding="utf-8"))
     assert compose["services"]["synapse"]["environment"]["SSL_CERT_FILE"] == "/ca/root.crt"
     assert "8443" not in str(compose["services"]["web"]["ports"])
 
 
 def test_racine_publiee_lisible_sans_sa_cle():
     # Synapse ne tourne pas en root : la racine copiee doit etre lisible, et la cle jamais copiee
-    script = (SERVEUR / "caddy" / "demarrer.sh").read_text()
+    script = (SERVEUR / "caddy" / "demarrer.sh").read_text(encoding="utf-8")
     assert "chmod 644 /ca-publique/root.crt" in script
     assert "root.key" not in script
